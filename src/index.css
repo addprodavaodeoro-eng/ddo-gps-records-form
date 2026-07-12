@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin 8s linear infinite;
+  }
+}
+
+/* HIGH FIDELITY PRINT MEDIA OVERRIDES FOR OFFICIAL PDF REPORTS */
+@media print {
+  /* Hide all interactive app elements */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Render only the high-fidelity print report frame */
+  #ddrms-printable-pdf, #ddrms-printable-pdf * {
+    visibility: visible;
+  }
+  
+  #ddrms-printable-pdf {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 24px;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Prevent split pages in rows and items */
+  tr, p, div {
+    page-break-inside: avoid;
+  }
+}
+

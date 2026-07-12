@@ -1,0 +1,6 @@
+{
+  "name": "Davao de Oro Disaster Risk Management System",
+  "description": "A full-stack disaster risk management and geohazard mapping system for Davao de Oro, integrating UP NOAH hazard overlays, GPS surveys, and an intelligent Gemini AI assistant.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

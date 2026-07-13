@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import { GoogleGenAI } from '@google/genai';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, or, sql, desc } from 'drizzle-orm';
 import { db } from './src/db/index.ts';
 import { 
   users, 
@@ -657,10 +657,15 @@ app.post('/api/members', async (req, res) => {
 
     // 2. DUPLICATE ENTRY PREVENTION
     // Rule: No duplicate combination of Full Name + Locale, and No duplicate Full Name across the system.
-    const [duplicateName] = await db.select().from(members).where(eq(sql`LOWER(${members.fullName})`, fullName.trim().toLowerCase()));
+    const [duplicateName] = await db.select().from(members).where(
+      or(
+        eq(sql`LOWER(${members.fullName})`, fullName.trim().toLowerCase()),
+        eq(members.cellphoneNumber, cellphoneNumber.trim())
+      )
+    );
     if (duplicateName) {
       await createNotification('warning', 'Duplicate Submission Prevented', `Submission attempt by already registered member: ${fullName}`);
-      return res.status(400).json({ error: 'This member has already submitted a location.' });
+      return res.status(400).json({ error: 'Double entry auto-rejected: This name or cellphone number has already been registered.' });
     }
 
     // 3. Assess geohazard risk level using UP NOAH system algorithm or use provided one
@@ -699,13 +704,13 @@ app.post('/api/members', async (req, res) => {
       accuracy: 10.0, // estimated mobile device precision
     });
 
-    await logActivity(null, 'MEMBER_SUBMISSION', `New GPS risk survey submitted for ${fullName} (${riskAssessment.riskLevel})`);
+    await logActivity(null, 'MEMBER_SUBMISSION', `New GPS risk survey submitted for ${fullName} (${finalRiskLevel})`);
     
     // Create Toast/Alert Notification
     await createNotification(
-      riskAssessment.riskLevel === 'High Risk' ? 'warning' : 'success',
+      finalRiskLevel === 'High Risk' ? 'warning' : 'success',
       'New Location Registered',
-      `${fullName} registered in ${localeObj.name} classified as ${riskAssessment.riskLevel}.`
+      `${fullName} registered in ${localeObj.name} classified as ${finalRiskLevel}.`
     );
 
     // Broadcast the updated item

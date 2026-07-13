@@ -1,6 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Locale, FamilyHead, Staff } from '../types.ts';
-import DdrmsMap from './DdrmsMap.tsx';
+import MapInterface from './MapInterface.tsx';
+import { assessRiskLevel } from "../utils/noah.ts";
 import { 
   MapPin, 
   Phone, 
@@ -34,10 +35,8 @@ export default function PublicForm({
   const [address, setAddress] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [riskLevel, setRiskLevel] = useState('');
-
+  
   // UI state
-  const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -59,40 +58,7 @@ export default function PublicForm({
     }
   }, [selectedLocaleId, familyHeadsList, staffList]);
 
-  // Retrieve GPS Coordinates
-  const handleGetLocation = () => {
-    setIsLocating(true);
-    setFormError(null);
-
-    if (!navigator.geolocation) {
-      setFormError('Your browser does not support Geolocation. Please enter coordinates manually or pin them on the map.');
-      setIsLocating(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        setIsLocating(false);
-      },
-      (error) => {
-        console.error('GPS retrieval error:', error);
-        // Fallback: use approximate coordinates of Davao de Oro
-        setLatitude(7.602 + (Math.random() - 0.5) * 0.05);
-        setLongitude(125.965 + (Math.random() - 0.5) * 0.05);
-        setFormError('Unable to retrieve exact GPS location. Showing approximate regional location. You can click on the map to pin your home accurately.');
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  // Callback when user clicks on map preview to set coordinates manually
-  const handleMapLocationChange = (lat: number, lng: number) => {
-    setLatitude(lat);
-    setLongitude(lng);
-  };
+  const selectedLocale = localesList.find(l => l.id.toString() === selectedLocaleId);
 
   const handleOpenConfirm = (e: FormEvent) => {
     e.preventDefault();
@@ -146,8 +112,7 @@ export default function PublicForm({
           })(),
           latitude,
           longitude,
-          address,
-          riskLevel
+          address
         })
       });
 
@@ -327,83 +292,13 @@ export default function PublicForm({
               />
             </div>
 
-            {/* GPS Retrieval Block */}
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h4 className="font-bold text-xs text-slate-850 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-emerald-500" />
-                  House GPS Coordinates
-                </h4>
-                {latitude !== null && longitude !== null ? (
-                  <p className="text-[11px] font-mono text-emerald-600 font-semibold">
-                    Latitude: {latitude.toFixed(6)}, Longitude: {longitude.toFixed(6)}
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-slate-400 font-medium">No coordinates set. Click locator below or tap on the map to pin your home.</p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGetLocation}
-                disabled={isLocating}
-                className="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
-                id="btn-public-get-gps"
-              >
-                {isLocating ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-b-transparent rounded-full animate-spin"></div>
-                    Retrieving GPS...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="w-3.5 h-3.5" />
-                    Get Current GPS Location
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Live Map Preview Block */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
-                Interactive Map Preview
-              </label>
-              <div className="rounded-xl overflow-hidden border border-slate-250 shadow-inner">
-                <DdrmsMap 
-                  members={[]}
-                  previewLocation={latitude !== null && longitude !== null ? { lat: latitude, lng: longitude } : null}
-                  onPreviewLocationChange={handleMapLocationChange}
-                  height="260px"
-                />
-              </div>
-              <span className="text-[9px] text-slate-400 block font-medium">
-                Verify your marker position. If incorrect, tap anywhere on the map above to move the GPS target precisely.
-              </span>
-            </div>
-
-            {/* UP NOAH Risk Level Selection */}
-            <div className="space-y-1.5 mt-4 border-t border-slate-200 pt-4">
-              <label htmlFor="riskLevel" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center">
-                <span>Hazard Risk Level <span className="text-emerald-500">*</span></span>
-              </label>
-              <select
-                id="riskLevel"
-                value={riskLevel}
-                onChange={(e) => setRiskLevel(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-semibold bg-white text-slate-850 transition cursor-pointer"
-                required
-              >
-                <option value="">-- Select Assessed Risk Level --</option>
-                <option value="Low Risk">Low Risk (Stable Terrain)</option>
-                <option value="Medium Risk">Medium Risk (Moderate Flood / Slopes)</option>
-                <option value="High Risk">High Risk (Severe Landslide / Debris Flow)</option>
-              </select>
-              <span className="text-[9px] text-slate-400 block font-medium">
-                Please visit the <a href="https://noah.up.edu.ph/" target="_blank" rel="noreferrer" className="text-emerald-500 underline font-semibold hover:text-emerald-600 transition">UP NOAH Map</a> to check your exact location's risk prior to submitting.
-              </span>
-            </div>
+            <MapInterface 
+              onLocationSelect={(lat, lng, risk) => {
+                setLatitude(lat);
+                setLongitude(lng);
+              }}
+              defaultLocaleName={selectedLocale?.name}
+            />
 
             {/* Submit Control */}
             <button

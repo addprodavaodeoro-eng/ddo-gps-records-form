@@ -663,8 +663,15 @@ app.post('/api/members', async (req, res) => {
       return res.status(400).json({ error: 'This member has already submitted a location.' });
     }
 
-    // 3. Assess geohazard risk level using UP NOAH system algorithm
-    const riskAssessment = assessRiskLevel(latitude, longitude, localeObj.name);
+    // 3. Assess geohazard risk level using UP NOAH system algorithm or use provided one
+    let finalRiskLevel = req.body.riskLevel;
+    let finalHazardSource = 'User Self-Assessed via UP NOAH Map';
+    
+    if (!finalRiskLevel) {
+      const riskAssessment = assessRiskLevel(latitude, longitude, localeObj.name);
+      finalRiskLevel = riskAssessment.riskLevel;
+      finalHazardSource = riskAssessment.hazardSource;
+    }
 
     // 4. Save member record
     const [newMember] = await db.insert(members).values({
@@ -675,14 +682,14 @@ app.post('/api/members', async (req, res) => {
       latitude,
       longitude,
       address,
-      riskLevel: riskAssessment.riskLevel,
+      riskLevel: finalRiskLevel,
     }).returning();
 
     // 5. Save audit logs and assessment logs
     await db.insert(riskAssessments).values({
       memberId: newMember.id,
-      riskLevel: riskAssessment.riskLevel,
-      hazardSource: riskAssessment.hazardSource,
+      riskLevel: finalRiskLevel,
+      hazardSource: finalHazardSource,
     });
 
     await db.insert(gpsLocations).values({
@@ -718,7 +725,7 @@ app.post('/api/members', async (req, res) => {
 // Edit member record
 app.put('/api/members/:id', requireAdminAuth, async (req: AdminAuthRequest, res) => {
   const id = parseInt(req.params.id);
-  const { fullName, cellphoneNumber, localeId, familyHeadId, latitude, longitude, address } = req.body;
+  const { fullName, cellphoneNumber, localeId, familyHeadId, latitude, longitude, address, riskLevel } = req.body;
 
   if (isNaN(id)) {
     return res.status(400).json({ error: 'Invalid member ID' });
@@ -730,8 +737,14 @@ app.put('/api/members/:id', requireAdminAuth, async (req: AdminAuthRequest, res)
       return res.status(400).json({ error: 'Invalid locale' });
     }
 
-    // Assess risk again based on coordinates
-    const riskAssessment = assessRiskLevel(latitude, longitude, localeObj.name);
+    // Assess risk again based on coordinates or provided risk level
+    let finalRiskLevel = riskLevel;
+    let finalHazardSource = 'Admin Adjusted based on NOAH UP';
+    if (!finalRiskLevel) {
+      const riskAssessment = assessRiskLevel(latitude, longitude, localeObj.name);
+      finalRiskLevel = riskAssessment.riskLevel;
+      finalHazardSource = riskAssessment.hazardSource;
+    }
 
     const [updated] = await db.update(members)
       .set({
@@ -742,7 +755,7 @@ app.put('/api/members/:id', requireAdminAuth, async (req: AdminAuthRequest, res)
         latitude,
         longitude,
         address,
-        riskLevel: riskAssessment.riskLevel,
+        riskLevel: finalRiskLevel,
       })
       .where(eq(members.id, id))
       .returning();
@@ -754,11 +767,11 @@ app.put('/api/members/:id', requireAdminAuth, async (req: AdminAuthRequest, res)
     // Update GPS or risk assessment tables
     await db.insert(riskAssessments).values({
       memberId: updated.id,
-      riskLevel: riskAssessment.riskLevel,
-      hazardSource: riskAssessment.hazardSource,
+      riskLevel: finalRiskLevel,
+      hazardSource: finalHazardSource,
     });
 
-    await logActivity(req.adminUser?.id || null, 'MEMBER_UPDATE', `Updated member: ${fullName} (${riskAssessment.riskLevel})`);
+    await logActivity(req.adminUser?.id || null, 'MEMBER_UPDATE', `Updated member: ${fullName} (${finalRiskLevel})`);
     broadcastUpdate('MEMBER_CHANGED', updated);
 
     return res.json(updated);

@@ -34,6 +34,7 @@ export default function PublicForm({
   const [address, setAddress] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [riskLevel, setRiskLevel] = useState('');
 
   // UI state
   const [isLocating, setIsLocating] = useState(false);
@@ -145,7 +146,8 @@ export default function PublicForm({
           })(),
           latitude,
           longitude,
-          address
+          address,
+          riskLevel
         })
       });
 
@@ -378,6 +380,28 @@ export default function PublicForm({
               </div>
               <span className="text-[9px] text-slate-400 block font-medium">
                 Verify your marker position. If incorrect, tap anywhere on the map above to move the GPS target precisely.
+              </span>
+            </div>
+
+            {/* UP NOAH Risk Level Selection */}
+            <div className="space-y-1.5 mt-4 border-t border-slate-200 pt-4">
+              <label htmlFor="riskLevel" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center">
+                <span>Hazard Risk Level <span className="text-emerald-500">*</span></span>
+              </label>
+              <select
+                id="riskLevel"
+                value={riskLevel}
+                onChange={(e) => setRiskLevel(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-semibold bg-white text-slate-850 transition cursor-pointer"
+                required
+              >
+                <option value="">-- Select Assessed Risk Level --</option>
+                <option value="Low Risk">Low Risk (Stable Terrain)</option>
+                <option value="Medium Risk">Medium Risk (Moderate Flood / Slopes)</option>
+                <option value="High Risk">High Risk (Severe Landslide / Debris Flow)</option>
+              </select>
+              <span className="text-[9px] text-slate-400 block font-medium">
+                Please visit the <a href="https://noah.up.edu.ph/" target="_blank" rel="noreferrer" className="text-emerald-500 underline font-semibold hover:text-emerald-600 transition">UP NOAH Map</a> to check your exact location's risk prior to submitting.
               </span>
             </div>
 

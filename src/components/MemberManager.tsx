@@ -36,6 +36,7 @@ export default function MemberManager({
   const [editAddress, setEditAddress] = useState('');
   const [editLat, setEditLat] = useState('');
   const [editLng, setEditLng] = useState('');
+  const [editRiskLevel, setEditRiskLevel] = useState('');
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -79,6 +80,7 @@ export default function MemberManager({
     setEditAddress(m.address || '');
     setEditLat(String(m.latitude));
     setEditLng(String(m.longitude));
+    setEditRiskLevel(m.riskLevel || '');
     setErrorMsg(null);
     setSuccessMsg(null);
   };
@@ -87,7 +89,6 @@ export default function MemberManager({
   const handleSaveEdit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editFullName.trim() || !editPhone.trim() || !editLocaleId || !editLat || !editLng || isSaving) return;
-
     setIsSaving(true);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -108,7 +109,8 @@ export default function MemberManager({
           familyHeadId: editFamilyHeadId ? parseInt(editFamilyHeadId) : null,
           latitude: parseFloat(editLat),
           longitude: parseFloat(editLng),
-          address: editAddress
+          address: editAddress,
+          riskLevel: editRiskLevel || undefined
         })
       });
 
@@ -621,6 +623,21 @@ export default function MemberManager({
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-semibold transition bg-slate-50 text-slate-900"
                   id="modal-edit-address"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Hazard Risk Level</label>
+                <select
+                  value={editRiskLevel}
+                  onChange={(e) => setEditRiskLevel(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold bg-slate-50 transition text-slate-800"
+                  id="modal-edit-risk"
+                >
+                  <option value="">-- Use Auto-Assessment --</option>
+                  <option value="Low Risk">Low Risk (Stable Terrain)</option>
+                  <option value="Medium Risk">Medium Risk (Moderate Flood / Slopes)</option>
+                  <option value="High Risk">High Risk (Severe Landslide / Debris Flow)</option>
+                </select>
+                <p className="text-[9px] text-slate-400 font-medium leading-tight">Leave unselected to auto-calculate via coordinates. Explicitly set if verified via UP NOAH map.</p>
               </div>
 
               <div className="flex gap-3 pt-2">
